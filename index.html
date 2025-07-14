@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload File</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            position: relative;
+        }
+        .container {
+            text-align: center;
+        }
+        .upload-area {
+            width: 200px;
+            height: 200px;
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        .upload-area:hover {
+            border-color: #666;
+        }
+        .upload-icon {
+            font-size: 64px;
+            color: #666;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        #message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: #333;
+            background-color: #e0f7e0;
+            padding: 10px 15px;
+            border-radius: 5px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        #message i {
+            color: #28a745;
+        }
+        #viewLink {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            background-color: #666;
+            color: white;
+            text-decoration: none;
+            border-radius: 20px;
+            font-size: 16px;
+            display: none;
+        }
+        #viewLink:hover {
+            background-color: #333;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 80%;
+            max-height: 80%;
+            overflow: auto;
+            text-align: center;
+        }
+        .modal-content img, .modal-content video, .modal-content audio {
+            max-width: 100%;
+            max-height: 400px;
+        }
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+        }
+        .download-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #666;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .download-btn:hover {
+            background-color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <label for="fileInput" class="upload-area">
+            <i class="fas fa-cloud-upload-alt upload-icon"></i>
+        </label>
+        <input type="file" id="fileInput" accept="*/*">
+        <div id="message"><i class="fas fa-check-circle"></i><span></span></div>
+        <a href="#" id="viewLink">View Saved File</a>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close">×</span>
+            <div id="fileContent"></div><br><br>
+            <a id="downloadBtn" class="download-btn" href="#" download>Download</a>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const message = document.getElementById('message');
+        const messageText = message.querySelector('span');
+        const viewLink = document.getElementById('viewLink');
+        const modal = document.getElementById('modal');
+        const fileContent = document.getElementById('fileContent');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const closeModal = document.querySelector('.close');
+
+        let currentFileName = localStorage.getItem('currentFileName') || '';
+
+        // Check for saved file on page load
+        if (currentFileName && localStorage.getItem(currentFileName)) {
+            viewLink.style.display = 'block';
+        }
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                currentFileName = file.name;
+                localStorage.setItem('currentFileName', currentFileName);
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    localStorage.setItem(file.name, event.target.result);
+                    messageText.textContent = `File "${file.name}" saved.`;
+                    message.style.display = 'flex';
+                    viewLink.style.display = 'block';
+                    setTimeout(() => { message.style.display = 'none'; }, 3000);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        viewLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentFileName && localStorage.getItem(currentFileName)) {
+                const dataUrl = localStorage.getItem(currentFileName);
+                const mimeType = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+                
+                if (mimeType.startsWith('image/')) 
+                    fileContent.innerHTML = `<img src="${dataUrl}" alt="Saved File">`;
+                } else if (mimeType.startsWith('video/')) {
+                    fileContent.innerHTML = `<video controls><source src="${dataUrl}" type="${mimeType}"></video>`;
+                } else if (mimeType.startsWith('audio/')) {
+                    fileContent.innerHTML = `<audio controls><source src="${dataUrl}" type="${mimeType}"></audio>`;
+                } else {
+                    fileContent.innerHTML = `<p>Preview not available for this file type.</p>`;
+                }
+
+                downloadBtn.href = dataUrl;
+                downloadBtn.download = currentFileName;
+                modal.style.display = 'flex';
+            }
+        });
+
+        closeModal.addEventListener('click', () => {
+            modal.style.display = 'none';
+            fileContent.innerHTML = '';
+        });
+
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+                fileContent.innerHTML = '';
+            }
+        });
+    </script>
+</body>
+</html>
