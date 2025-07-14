@@ -102,8 +102,6 @@
             right: 20px;
             font-size: 24px;
             cursor: pointer;
-            width: 30px;
-            height: 30px;
         }
         .download-btn {
             margin-top: 20px;
@@ -148,18 +146,12 @@
         const downloadBtn = document.getElementById('downloadBtn');
         const closeModal = document.querySelector('.close');
 
-        let currentFileName = localStorage.getItem('currentFileName') || '';
-
-        // Check for saved file on page load
-        if (currentFileName && localStorage.getItem(currentFileName)) {
-            viewLink.style.display = 'block';
-        }
+        let currentFileName = '';
 
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
                 currentFileName = file.name;
-                localStorage.setItem('currentFileName', currentFileName);
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     localStorage.setItem(file.name, event.target.result);
@@ -178,7 +170,7 @@
                 const dataUrl = localStorage.getItem(currentFileName);
                 const mimeType = dataUrl.split(',')[0].split(':')[1].split(';')[0];
                 
-                if (mimeType.startsWith('image/')) 
+                if (mimeType.startsWith('image/')) {
                     fileContent.innerHTML = `<img src="${dataUrl}" alt="Saved File">`;
                 } else if (mimeType.startsWith('video/')) {
                     fileContent.innerHTML = `<video controls><source src="${dataUrl}" type="${mimeType}"></video>`;
