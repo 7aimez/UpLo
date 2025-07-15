@@ -150,57 +150,102 @@
 
         let currentFileName = localStorage.getItem('currentFileName') || '';
 
-        // Check if a file is already saved on page load
+        // Check for saved file on page load
         window.addEventListener('load', () => {
             if (currentFileName && localStorage.getItem(currentFileName)) {
                 viewLink.style.display = 'block';
             }
         });
 
-        fileInput.addEventListener('change', (e) => {
+        // Handle file upload
+        fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
-            if (file) {
+            if (!file) return;
+
+            try {
                 currentFileName = file.name;
                 localStorage.setItem('currentFileName', currentFileName);
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    localStorage.setItem(file.name, event.target.result);
-                    messageText.textContent = `File "${file.name}" saved.`;
-                    message.style.display = 'flex';
-                    viewLink.style.display = 'block';
-                    setTimeout(() => { message.style.display = 'none'; }, 3000);
-                };
-                reader.readAsDataURL(file);
+
+                // Read file as Data URL
+                const dataUrl = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => reject(new Error('File reading failed'));
+                    reader.readAsDataURL(file);
+                });
+
+                // Save to localStorage
+                localStorage.setItem(file.name, dataUrl);
+
+                // Show success message
+                messageText.textContent = `File "${file.name}" saved.`;
+                message.style.display = 'flex';
+                viewLink.style.display = 'block';
+                setTimeout(() => { message.style.display = 'none'; }, 2000);
+            } catch (error) {
+                messageText.textContent = 'Error saving file.';
+                message.style.display = 'flex';
+                message.style.backgroundColor = '#f7e0e0';
+                message.querySelector('i').style.color = '#a72828';
+                setTimeout(() => { message.style.display = 'none'; }, 2000);
             }
         });
 
-        viewLink.addEventListener('click', (e) => {
+        // View saved file
+        viewLink.addEventListener('click', async (e) => {
             e.preventDefault();
-            if (currentFileName && localStorage.getItem(currentFileName)) {
+            if (!currentFileName || !localStorage.getItem(currentFileName)) return;
+
+            try {
                 const dataUrl = localStorage.getItem(currentFileName);
                 const mimeType = dataUrl.split(',')[0].split(':')[1].split(';')[0];
-                
+
+                // Clear previous content
+                fileContent.innerHTML = '';
+
+                // Display based on file type
                 if (mimeType.startsWith('image/')) {
-                    fileContent.innerHTML = `<img src="${dataUrl}" alt="Saved File">`;
+                    const img = new Image();
+                    img.src = dataUrl;
+                    img.alt = 'Saved File';
+                    await new Promise((resolve) => { img.onload = resolve; });
+                    fileContent.appendChild(img);
                 } else if (mimeType.startsWith('video/')) {
-                    fileContent.innerHTML = `<video controls><source src="${dataUrl}" type="${mimeType}"></video>`;
+                    const video = document.createElement('video');
+                    video.controls = true;
+                    const source = document.createElement('source');
+                    source.src = dataUrl;
+                    source.type = mimeType;
+                    video.appendChild(source);
+                    fileContent.appendChild(video);
                 } else if (mimeType.startsWith('audio/')) {
-                    fileContent.innerHTML = `<audio controls><source src="${dataUrl}" type="${mimeType}"></audio>`;
+                    const audio = document.createElement('audio');
+                    audio.controls = true;
+                    const source = document.createElement('source');
+                    source.src = dataUrl;
+                    source.type = mimeType;
+                    audio.appendChild(source);
+                    fileContent.appendChild(audio);
                 } else {
-                    fileContent.innerHTML = `<p>Preview not available for this file type.</p>`;
+                    fileContent.innerHTML = '<p>Preview not available for this file type.</p>';
                 }
 
+                // Set download link
                 downloadBtn.href = dataUrl;
                 downloadBtn.download = currentFileName;
                 modal.style.display = 'flex';
+            } catch (error) {
+                fileContent.innerHTML = '<p>Error loading file.</p>';
             }
         });
 
+        // Close modal
         closeModal.addEventListener('click', () => {
             modal.style.display = 'none';
             fileContent.innerHTML = '';
         });
 
+        // Close modal on outside click
         window.addEventListener('click', (e) => {
             if (e.target === modal) {
                 modal.style.display = 'none';
